@@ -100,9 +100,9 @@ EPA/
 ### Contributors
 
 - Development & Maintenance: [@WUBING2023](https://github.com/WUBING2023)
-- Testing / QA: [@YeMoonlight](https://github.com/YeMoonlight)
-- Testing / QA: [@Yuzhihan-zyr](https://github.com/Yuzhihan-zyr)
 - Inspirational Contribution: yaxing@cvc.uab.es
+- Testing: [@YeMoonlight](https://github.com/YeMoonlight)
+- Testing: [@Yuzhihan-zyr](https://github.com/Yuzhihan-zyr)
 
 ### License
 

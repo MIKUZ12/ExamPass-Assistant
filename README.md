@@ -105,9 +105,9 @@ EPA/
 ### 贡献者
 
 - 开发与维护：[@WUBING2023](https://github.com/WUBING2023)
-- 测试 / QA：[@YeMoonlight](https://github.com/YeMoonlight)
-- 测试 / QA：[@Yuzhihan-zyr](https://github.com/Yuzhihan-zyr)
 - 启发性贡献：yaxing@cvc.uab.es
+- 测试：[@YeMoonlight](https://github.com/YeMoonlight)
+- 测试：[@Yuzhihan-zyr](https://github.com/Yuzhihan-zyr)
 
 ### 许可证
 
