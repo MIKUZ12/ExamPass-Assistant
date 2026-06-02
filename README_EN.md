@@ -1,8 +1,19 @@
 # ExamPass Assistant
 
-**Turn lecture slides into exam-ready study materials.**
+**Turn lecture slides into study materials with deep explanations, inline figures, derivations, quizzes, and wrong-answer review.**
 
 > [中文](./README.md)
+
+---
+
+### Repository Note
+
+This is a customized repository maintained by **[@MIKUZ12](https://github.com/MIKUZ12)**:
+
+- Current repository: `https://github.com/MIKUZ12/ExamPass-Assistant`
+- Original project: `https://github.com/WUBING2023/ExamPass-Assistant`
+
+This repository is adapted from the original project. It keeps the original extraction, HTML generation, and quiz workflow, while adding custom features focused on deeper chapter explanations, inline source figures, stronger quiz design, and wrong-answer analysis. Original contributors are credited below.
 
 ---
 
@@ -10,8 +21,8 @@
 
 An AI-powered exam prep assistant. Drop in lecture PPTs, Word handouts, or PDF readings — it generates:
 
-- **Knowledge Guides** — structured review notes with MathJax formulas, dual-color highlighting (key points in bold black, explanations in lighter gray), priority tags (must-know / key / frequent / info), and auto-generated table of contents
-- **Interactive Quizzes** — 28 questions, 100 points. Click to answer, one-click grading, per-question correct/incorrect badges, detailed explanations, and common mistake warnings
+- **Professor-style Chapter Guides** — narrative explanations that connect slides/modules, derive formulas step by step, and place figures next to the theory they explain
+- **Interactive Quizzes** — 28 questions, 100 points. Click to answer, one-click grading, per-question correct/incorrect badges, detailed explanations, common mistake warnings, and wrong-answer review export
 
 Open in any browser. Ctrl+P to print as PDF. MathJax renders formulas perfectly.
 
@@ -28,23 +39,33 @@ PPTX · DOCX · PDF (with image recognition via multimodal analysis)
 ### Quick Start
 
 ```bash
-git clone https://github.com/WUBING2023/ExamPass-Assistant.git
+git clone https://github.com/MIKUZ12/ExamPass-Assistant.git
 cd ExamPass-Assistant
 pip install -r requirements.txt
 ```
 
 ### Usage
 
-**Generate chapter materials** — run `/exampass` in any course directory. The skill scans subfolders, groups files by chapter, extracts all content, performs deep analysis, and outputs knowledge guides + interactive quizzes into each folder.
+**Generate chapter materials** — run `/exampass` in any course directory. The skill scans subfolders, groups files by chapter, extracts all content, performs deep analysis, and outputs professor-style guides + interactive quizzes into each folder.
 
 **Use in your own code**:
 
 ```python
 from scripts.template_engine import save_knowledge_html, save_test
 
-# Knowledge guide — pass HTML body directly (engine adds H1 + TOC)
-body = '<h2>1. Sequence Modeling Basics</h2>\n<h3>1.1 What is Sequence Data</h3>\n<p>...</p>'
-save_knowledge_html(body, 'knowledge.html', 'Chapter 15')
+# Chapter guide — pass HTML body directly (engine adds H1 + TOC)
+# Use {{IMAGE:img_001}} to inline a key source figure next to the explanation.
+body = '<h2>Deep Module Walkthrough</h2>\n<h3>Why the learning curve matters</h3>\n<p>...</p>{{IMAGE:img_001}}'
+save_knowledge_html(
+    body,
+    'knowledge.html',
+    'Chapter 15',
+    embedded_images=[{
+        'id': 'img_001',
+        'path': '_exampass_images/slides/slide4_img2.png',
+        'caption': 'Learning curve',
+    }],
+)
 
 # Interactive quiz — pass question data, get a self-grading page
 questions = [
@@ -63,8 +84,8 @@ save_test(questions, 'quiz.html', 'Chapter 15', '100 points', duration_minutes=3
 
 1. **Scan & Group** — recursively finds all PPTX/DOCX/PDF files, groups by parent folder
 2. **Extract** — pulls text, tables, and embedded images from each file
-3. **Analyze** — Claude deeply reads the content, identifies concepts, motivations, and logical connections
-4. **Generate** — produces styled HTML with dual-color highlighting, MathJax formulas, and interactive quiz logic
+3. **Analyze** — the model reads the content, reconstructs the chapter logic, derives formulas, explains figures, and selects important source images
+4. **Generate** — produces styled self-contained HTML with inline images, MathJax formulas, interactive quiz logic, and wrong-answer review export
 
 ### Project Structure
 
@@ -93,13 +114,14 @@ EPA/
 │   ├── page_template.html      # HTML page shell
 │   ├── test_js_template.js     # Quiz JS template
 │   └── test_labels.json        # Chinese UI labels
-├── tests/                      # 102 test cases
+├── tests/                      # 110 test cases
 └── requirements.txt
 ```
 
 ### Contributors
 
-- Development & Maintenance: [@WUBING2023](https://github.com/WUBING2023)
+- Customized Version Maintenance: [@MIKUZ12](https://github.com/MIKUZ12)
+- Original Project Development & Maintenance: [@WUBING2023](https://github.com/WUBING2023)
 - Inspirational Contribution: yaxing@cvc.uab.es
 - Testing: [@YeMoonlight](https://github.com/YeMoonlight)
 - Testing: [@Yuzhihan-zyr](https://github.com/Yuzhihan-zyr)

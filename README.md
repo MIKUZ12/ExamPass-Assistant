@@ -1,8 +1,19 @@
 # ExamPass Assistant
 
-**把课堂讲义变成考试利器。** 一键将 PPT、Word、PDF 课件转化为结构化知识清单和交互式测试题。
+**把课堂讲义变成可对照、可推导、可复盘的考试复习系统。** 一键将 PPT、Word、PDF 课件转化为教授式章节讲义和交互式测试题。
 
 > [English](./README_EN.md)
+
+---
+
+### 仓库说明
+
+这是 **[@MIKUZ12](https://github.com/MIKUZ12)** 维护的自用改造版仓库：
+
+- 当前仓库：`https://github.com/MIKUZ12/ExamPass-Assistant`
+- 原始项目：`https://github.com/WUBING2023/ExamPass-Assistant`
+
+本仓库基于原始项目二次开发，保留原项目的课程资料提取、HTML 生成、章节测试等基础能力，并围绕“真正讲懂课程内容”做了定制增强。原项目作者和贡献者信息保留在下方贡献者与许可证部分。
 
 ---
 
@@ -10,23 +21,27 @@
 
 | 角色 | 用途 |
 |------|------|
-| 大学生 | 上传课程 PPT/讲义，自动生成知识清单 + 交互式章节测试（选择+一键批改+逐题解析），高效通过期末考试 |
-| 授课教师 | 课件一键转化为结构化知识总结，自动生成配套习题+答案解析，直接用于课堂教学或课后作业 |
-| 考研/考证 | 参考书 PDF 转为精简知识清单，配合自测题检验掌握程度 |
+| 大学生 | 上传课程 PPT/讲义，自动生成教授式章节讲义 + 交互式章节测试，按逻辑链、公式推导和图表含义复习 |
+| 授课教师 | 课件一键转化为结构化讲义，自动生成有区分度的配套习题、答案解析和错题复盘材料 |
+| 考研/考证 | 参考书 PDF 转为可推导、可自测、可错题复盘的复习材料 |
 
 ### 核心功能
 
 - 支持 PPTX / DOCX / PDF，递归扫描目录，按章节自动分组
-- 提取文字、表格、图片（Claude 多模态分析）
-- 生成**知识清单 HTML**：MathJax 公式完美渲染，双色标注（知识点黑色加粗 + 解释浅灰细体），重点分级标签（必考/重点/高频/了解），自动目录导航
+- 提取文字、表格、图片，并在 `_extraction_bundle.json` 中记录关键图片候选
+- 生成**教授式章节讲义 HTML**：先建立章节知识地图，再逐页 / 逐模块讲解前后逻辑、概念动机、公式推导、图表含义和考试考法
+- 支持**图片内联嵌入**：通过 `{{IMAGE:img_001}}` 将 PPT 中的关键图嵌入到对应讲解段落旁边，最终 HTML 使用 data URI，不依赖本地图片文件
+- 支持**公式与图文融合讲解**：公式必须在相关模块中逐步推导，图表必须解释坐标轴、曲线、箭头、模块和变量关系
 - 生成**交互式章节测试 HTML**：28 题 100 分，点击选项→一键批改→逐题显示正确/错误+详细解析+易错提醒
+- 生成**错题分析文档**：自动收录客观题错题，导出 Markdown，附带可复制的错题分析 Prompt
+- 强化**题目质量约束**：选择题干扰项必须来自同一概念簇、真实错因或推导链，不允许一眼排除的奇怪选项
 - 分析结果自动缓存，同目录再次运行秒级出结果
 - 浏览器打开即用，Ctrl+P 打印为 PDF
 
 ### 快速开始
 
 ```bash
-git clone https://github.com/WUBING2023/ExamPass-Assistant.git
+git clone https://github.com/MIKUZ12/ExamPass-Assistant.git
 cd ExamPass-Assistant
 pip install -r requirements.txt
 ```
@@ -47,7 +62,7 @@ pip install -r requirements.txt
 ```
 
 每个章节生成：
-- `知识清单.html` — 结构化复习资料（逻辑链完整、双色扫读、公式完美）
+- `知识清单.html` — 教授式复习讲义（章节主线、逐页/逐模块讲解、公式推导、图文内联）
 - `章节测试.html` — 交互式自测（可选可批改、逐题解析）
 
 #### 在代码中调用
@@ -55,9 +70,19 @@ pip install -r requirements.txt
 ```python
 from scripts.template_engine import save_knowledge_html, save_test
 
-# 知识清单：HTML body 直接传入（引擎自动加 H1 + 目录）
-body = '<h2>一、序列建模基础</h2>\n<h3>1.1 什么是序列数据</h3>\n<p>...</p>'
-save_knowledge_html(body, '知识清单.html', '第15章 序列生成模型')
+# 教授式讲义：HTML body 直接传入（引擎自动加 H1 + 目录）
+# 可用 {{IMAGE:img_001}} 将关键图片嵌入到对应讲解段落旁边
+body = '<h2>逐页 / 逐模块深度讲解</h2>\n<h3>学习曲线为什么重要</h3>\n<p>...</p>{{IMAGE:img_001}}'
+save_knowledge_html(
+    body,
+    '知识清单.html',
+    '第15章 序列生成模型',
+    embedded_images=[{
+        'id': 'img_001',
+        'path': '_exampass_images/课件/slide4_img2.png',
+        'caption': '学习曲线示意图',
+    }],
+)
 
 # 交互式测试：题目列表直接传入
 questions = [
@@ -98,13 +123,14 @@ EPA/
 │   ├── page_template.html      # HTML 页面模板
 │   ├── test_js_template.js     # 测试页 JS 模板
 │   └── test_labels.json        # 中文标签配置
-├── tests/                      # 102 个测试用例
+├── tests/                      # 110 个测试用例
 └── requirements.txt
 ```
 
 ### 贡献者
 
-- 开发与维护：[@WUBING2023](https://github.com/WUBING2023)
+- 当前改造版维护：[@MIKUZ12](https://github.com/MIKUZ12)
+- 原项目开发与维护：[@WUBING2023](https://github.com/WUBING2023)
 - 启发性贡献：yaxing@cvc.uab.es
 - 测试：[@YeMoonlight](https://github.com/YeMoonlight)
 - 测试：[@Yuzhihan-zyr](https://github.com/Yuzhihan-zyr)
