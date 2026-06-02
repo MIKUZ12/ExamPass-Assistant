@@ -28,6 +28,13 @@ class TestBuildTestPrompt:
         prompt = build_test_prompt("")
         assert len(prompt) > 0
 
+    def test_prompt_requires_deep_distractors_and_derivations(self):
+        prompt = build_test_prompt("公式推导和图表解释。")
+        assert "同一概念簇" in prompt
+        assert "一眼排除" in prompt
+        assert "公式推导题" in prompt
+        assert "错题复盘提示" in prompt
+
 
 class TestSplitTestAndAnswer:
     def test_standard_split(self):

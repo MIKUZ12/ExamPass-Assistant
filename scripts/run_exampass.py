@@ -11,13 +11,34 @@ Handles the full pipeline:
 No inline Python in shell commands needed. All output written to files.
 """
 
-import sys, os, json
+import sys, os, json, re
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from scanner import scan_and_group, get_group_name
 from extractor import extract_file, merge_group_content
-from image_extractor import extract_from_pptx
+from utils import safe_filename
+
+
+def _slide_context(result, image_path):
+    """Return lightweight slide context for extracted PPT images."""
+    if result.get('type') not in ('.pptx', '.ppt'):
+        return {}
+
+    match = re.search(r'slide(\d+)_img', os.path.basename(image_path))
+    if not match:
+        return {}
+
+    slide_number = int(match.group(1))
+    for slide in result.get('raw', {}).get('slides', []):
+        if slide.get('number') == slide_number:
+            text = slide.get('text') or ''
+            return {
+                'slide': slide_number,
+                'slide_title': slide.get('title', ''),
+                'text_preview': text[:180],
+            }
+    return {'slide': slide_number}
 
 
 def main(target_dir):
@@ -41,16 +62,28 @@ def main(target_dir):
         print("=" * 50)
 
         results = []
-        all_images = []
+        image_candidates = []
+        image_root = os.path.join(folder, '_exampass_images')
 
         for fpath in files:
             fname = os.path.basename(fpath)
             ext = os.path.splitext(fpath)[1].lower()
             print("  Extracting:", fname, "(" + ext + ")")
 
-            result = extract_file(fpath)
+            stem = safe_filename(os.path.splitext(fname)[0]) or 'source'
+            image_output_dir = os.path.join(image_root, stem)
+            result = extract_file(fpath, image_output_dir=image_output_dir)
             results.append(result)
-            all_images.extend(result.get('images', []))
+
+            for image_path in result.get('images', []):
+                candidate = {
+                    'id': 'img_' + str(len(image_candidates) + 1).zfill(3),
+                    'source_file': fname,
+                    'path': os.path.relpath(image_path, folder),
+                    'filename': os.path.basename(image_path),
+                }
+                candidate.update(_slide_context(result, image_path))
+                image_candidates.append(candidate)
 
             # Save individual extraction text for debugging
             txt_path = os.path.join(folder, fname + '_extracted.txt')
@@ -66,8 +99,13 @@ def main(target_dir):
             'folder': folder,
             'merged_text': merged,
             'file_count': len(files),
+            'image_candidates': image_candidates,
             'individual_results': [
-                {'filename': os.path.basename(f), 'text_length': len(r['text_summary'])}
+                {
+                    'filename': os.path.basename(f),
+                    'text_length': len(r['text_summary']),
+                    'image_count': len(r.get('images', [])),
+                }
                 for f, r in zip(files, results)
             ],
         }
@@ -76,6 +114,7 @@ def main(target_dir):
             json.dump(bundle, f, ensure_ascii=False)
         print("  Bundle saved:", bundle_path)
         print("  Total merged:", len(merged), "chars")
+        print("  Image candidates:", len(image_candidates))
         print()
 
     print("Done. Extraction complete for", len(groups), "group(s).")

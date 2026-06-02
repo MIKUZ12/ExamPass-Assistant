@@ -19,6 +19,12 @@
   "reference_label": "参考答案",
   "graded_label": "已批改",
   "grade_button": "提交批改",
+  "unanswered_label": "未作答",
+  "wrong_review_title": "错题分析文档",
+  "wrong_review_intro": "本次收录 __COUNT__ 道客观题错题。可以下载 Markdown 文档，或复制整段内容交给模型做错因分析和二次学习规划。",
+  "no_wrong_questions": "本次客观题没有错题。主观题请对照参考答案自行复盘。",
+  "download_wrong_review": "下载错题文档",
+  "copy_wrong_review_prompt": "复制错题分析 Prompt",
   "score_label": "总分",
   "duration_prefix": "满分 100 分 | 建议 ",
   "duration_suffix": " 分钟 | 选择答案后点击提交批改"

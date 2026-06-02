@@ -23,26 +23,36 @@ def load_cache(directory):
     return None
 
 
-def save_cache(directory, knowledge_body, questions):
+def save_cache(directory, knowledge_body, questions, embedded_images=None,
+               wrong_answer_analysis_prompt='', **extra_cache):
     path = os.path.join(directory, '_exam_cache.json')
+    cache = {
+        'knowledge_body': knowledge_body,
+        'questions': questions,
+    }
+    if embedded_images:
+        cache['embedded_images'] = embedded_images
+    if wrong_answer_analysis_prompt:
+        cache['wrong_answer_analysis_prompt'] = wrong_answer_analysis_prompt
+    cache.update(extra_cache)
     with open(path, 'w', encoding='utf-8') as f:
-        json.dump({
-            'knowledge_body': knowledge_body,
-            'questions': questions,
-        }, f, ensure_ascii=False)
+        json.dump(cache, f, ensure_ascii=False)
 
 
-def generate(directory, knowledge_body, questions, title, subtitle='', duration=30):
+def generate(directory, knowledge_body, questions, title, subtitle='', duration=30,
+             embedded_images=None, wrong_answer_analysis_prompt=''):
     """Generate both HTML files from content."""
     save_knowledge_html(
         knowledge_body,
         os.path.join(directory, '知识清单.html'),
-        title
+        title,
+        embedded_images=embedded_images,
     )
     save_test(
         questions,
         os.path.join(directory, '章节测试.html'),
-        title, subtitle, duration_minutes=duration
+        title, subtitle, duration_minutes=duration,
+        wrong_answer_analysis_prompt=wrong_answer_analysis_prompt,
     )
 
 
@@ -83,20 +93,24 @@ if __name__ == '__main__':
         print('Read _extraction_bundle.json, then build:')
         print('  knowledge_body = "<h2>...</h2>..."  (HTML with H2/H3/p/table/blockquote)')
         print('  questions = [{type:"choice",...}, ...]  (28 questions)')
+        print('  embedded_images = [{path:"_exampass_images/...", caption:"...", reason:"..."}]  (optional important images)')
+        print('  wrong_answer_analysis_prompt = "..."  (optional custom prompt for wrong-question review)')
         print()
         print('Then call:')
         print(f'  from generate_cached import save_cache, generate')
-        print(f'  save_cache(directory, knowledge_body, questions)')
-        print(f'  generate(directory, knowledge_body, questions, title, subtitle, duration=30)')
+        print(f'  save_cache(directory, knowledge_body, questions, embedded_images=embedded_images, wrong_answer_analysis_prompt=wrong_answer_analysis_prompt)')
+        print(f'  generate(directory, knowledge_body, questions, title, subtitle, duration=30, embedded_images=embedded_images, wrong_answer_analysis_prompt=wrong_answer_analysis_prompt)')
         sys.exit(0)
 
     # Fast path: use cached content
     cache = load_cache(directory)
     if cache:
         print('Cache found. Generating HTML...')
-        title = os.path.basename(directory)
+        title = cache.get('title') or os.path.basename(directory)
         generate(directory, cache['knowledge_body'], cache['questions'], title,
-                 subtitle='满分 100 分', duration=30)
+                 subtitle='满分 100 分', duration=30,
+                 embedded_images=cache.get('embedded_images'),
+                 wrong_answer_analysis_prompt=cache.get('wrong_answer_analysis_prompt', ''))
         print('Done.')
         print_status(directory)
     else:

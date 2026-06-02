@@ -3,6 +3,7 @@
 import os
 import pytest
 from html_generator import generate_html
+from template_engine import save_test
 
 
 SAMPLE_MARKDOWN = """---
@@ -110,3 +111,31 @@ $$\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$$
         generate_html("# First\n", output)
         generate_html("# Second\n", output)
         assert os.path.exists(output)
+
+    def test_interactive_test_includes_wrong_review_tools(self, temp_dir):
+        output = os.path.join(temp_dir, "test.html")
+        questions = [
+            {
+                "type": "choice",
+                "points": 2,
+                "question": "下列哪项最符合条件？",
+                "options": ["正确边界", "漏掉条件", "混淆概念", "中间结论"],
+                "answer": 0,
+                "knowledge_point": "条件适用",
+                "diagnosis_hint": "混淆适用条件",
+                "explanation": "<strong>正确答案</strong>：A。",
+                "pitfall": "不要漏掉条件。",
+            }
+        ]
+        save_test(
+            questions,
+            output,
+            "章节测试",
+            wrong_answer_analysis_prompt="按错因归类并补全推导。",
+        )
+
+        html = open(output, encoding="utf-8").read()
+        assert "wrong-review-box" in html
+        assert "renderWrongReviewMarkdown" in html
+        assert "按错因归类并补全推导。" in html
+        assert "下载错题文档" in html

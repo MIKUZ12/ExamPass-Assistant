@@ -35,6 +35,7 @@ def extract_file(filepath: str, image_output_dir: Optional[str] = None) -> Dict[
     images = []
     if image_output_dir:
         try:
+            os.makedirs(image_output_dir, exist_ok=True)
             images = img_extractor(filepath, image_output_dir)
         except Exception:
             pass

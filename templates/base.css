@@ -56,6 +56,40 @@ table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.95e
 td, th { border: 1px solid var(--card-border); padding: 5px 9px; text-align: left; }
 th { background: var(--paper-dark); font-weight: 700; }
 
+/* ── Embedded source images ── */
+.embedded-images {
+  margin: 18px 0 24px;
+}
+.embedded-images-intro {
+  color: var(--ink-light);
+  font-size: 0.95em;
+}
+.embedded-image {
+  margin: 14px 0 18px;
+  padding: 10px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  break-inside: avoid;
+}
+.embedded-image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid var(--divider);
+  background: #fff;
+}
+.embedded-image figcaption {
+  margin-top: 8px;
+  color: var(--ink-light);
+  font-size: 0.92em;
+  line-height: 1.5;
+}
+.embedded-image-note::before {
+  content: " - ";
+}
+
 /* ── Knowledge point vs explanation ── */
 .kp { font-weight: 700; color: var(--ink); }           /* key point: bold dark */
 .exp { font-weight: 400; color: var(--ink-light); }    /* explanation: lighter */
