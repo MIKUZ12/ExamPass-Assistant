@@ -30,15 +30,45 @@ _PAGE_TEMPLATE = _read('page_template.html')
 _MATHJAX_CONFIG = '''<script>
 MathJax = {
   tex: {
-    inlineMath: [['$', '$'], ['\\(', '\\)']],
-    displayMath: [['$$', '$$'], ['\\[', '\\]']]
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
   }
 };
 </script>'''
 
-_MATHJAX_SCRIPT = (
-    '<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"></script>'
-)
+# MathJax: auto-download to local path if not present, fallback to CDN
+_MATHJAX_LOCAL_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'mathjax')
+_MATHJAX_LOCAL_FILE = os.path.join(_MATHJAX_LOCAL_DIR, 'tex-svg.js')
+_MATHJAX_CDN_URL = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js'
+
+def _ensure_mathjax():
+    """Download MathJax locally if not present; return the src attribute value."""
+    if os.path.exists(_MATHJAX_LOCAL_FILE):
+        return 'src="mathjax/tex-svg.js"'
+    try:
+        os.makedirs(_MATHJAX_LOCAL_DIR, exist_ok=True)
+        import urllib.request
+        urllib.request.urlretrieve(_MATHJAX_CDN_URL, _MATHJAX_LOCAL_FILE)
+        return 'src="mathjax/tex-svg.js"'
+    except Exception:
+        return f'src="{_MATHJAX_CDN_URL}"'
+
+
+def _copy_mathjax_to_dir(target_dir):
+    """Copy mathjax/tex-svg.js to target_dir/mathjax/ if not already there."""
+    if not target_dir:
+        return
+    dest_dir = os.path.join(target_dir, 'mathjax')
+    dest_file = os.path.join(dest_dir, 'tex-svg.js')
+    if os.path.exists(dest_file):
+        return
+    if not os.path.exists(_MATHJAX_LOCAL_FILE):
+        return
+    os.makedirs(dest_dir, exist_ok=True)
+    import shutil
+    shutil.copy2(_MATHJAX_LOCAL_FILE, dest_file)
+
+_MATHJAX_SCRIPT = '<script ' + _ensure_mathjax() + '></script>'
 
 
 def _build_page(title, body_html, css_extra='', js_extra=''):
@@ -222,6 +252,7 @@ def _auto_toc_and_title(body_html, title):
 
 
 def save_knowledge_html(body_html, output_path, title, embedded_images=None):
+    _copy_mathjax_to_dir(os.path.dirname(os.path.abspath(output_path)))
     body_html = _inject_embedded_images(
         body_html,
         embedded_images,
@@ -236,6 +267,94 @@ def save_knowledge_html(body_html, output_path, title, embedded_images=None):
         f.write(html)
 
 
+# ─── Question validation ───────────────────────────────────────────
+
+def _iter_question_strings(questions):
+    """Yield (label, text) for every string field in every question."""
+    for i, q in enumerate(questions, start=1):
+        for key in ("question", "explanation", "pitfall", "knowledge_point", "diagnosis_hint"):
+            value = q.get(key)
+            if isinstance(value, str):
+                yield f"Q{i}.{key}", value
+        for j, opt in enumerate(q.get("options") or []):
+            if isinstance(opt, str):
+                yield f"Q{i}.options[{j}]", opt
+
+
+def _validate_math_text(label, text):
+    """Check a single text field for broken LaTeX that would render incorrectly."""
+    import re as _vre
+
+    # Control characters that indicate Python ate a LaTeX backslash
+    _bad_controls = {
+        "\x07": "疑似 \\arctan 或 \\approx 被 Python 解释成 BEL 控制字符",
+        "\x0c": "疑似 \\frac 被 Python 解释成 form feed 控制字符",
+    }
+    for ch, reason in _bad_controls.items():
+        if ch in text:
+            raise ValueError(f"{label} 含损坏控制字符：{reason}；片段={text[:160]!r}")
+
+    # Tab inside a formula usually means \to was eaten
+    for m in _vre.finditer(r"\$[^$]*\$", text):
+        if "\t" in m.group(0):
+            raise ValueError(
+                f"{label} 的公式中含 Tab，通常是 \\to 写坏了；公式={m.group(0)!r}"
+            )
+
+    # Unmatched $
+    if text.count("$") % 2 != 0:
+        raise ValueError(
+            f"{label} 的 $ 数量为奇数，公式分隔符未闭合；片段={text[:160]!r}"
+        )
+
+    # Wrong bmatrix / cases environment syntax
+    if r"\begin{\bmatrix}" in text or r"\end{\bmatrix}" in text:
+        raise ValueError(
+            f"{label} 写错了 bmatrix 环境，应为 \\begin{{bmatrix}} / \\end{{bmatrix}}"
+        )
+    if r"\begin{\cases}" in text or r"\end{\cases}" in text:
+        raise ValueError(
+            f"{label} 写错了 cases 环境，应为 \\begin{{cases}} / \\end{{cases}}"
+        )
+
+    # Obvious corrupted LaTeX fragments
+    _bad_frags = ["fracK", "fracs", "lim_{sto", "stoinfty", "rctan", "pprox"]
+    for pat in _bad_frags:
+        if pat in text:
+            raise ValueError(f"{label} 含疑似损坏公式片段 `{pat}`")
+
+
+def _validate_question_answer_schema(questions):
+    """Validate answer field types and ranges."""
+    for i, q in enumerate(questions, start=1):
+        qtype = q.get("type")
+        ans = q.get("answer")
+
+        if qtype == "choice":
+            if not isinstance(ans, int):
+                raise ValueError(
+                    f"Q{i}.answer 必须是选项下标 int（0/1/2/3），当前为 {ans!r}"
+                )
+            opts = q.get("options") or []
+            if ans < 0 or ans >= len(opts):
+                raise ValueError(
+                    f"Q{i}.answer={ans} 超出 options 范围（共 {len(opts)} 个选项）"
+                )
+
+        if qtype == "tf":
+            if ans not in (0, 1):
+                raise ValueError(
+                    f"Q{i}.answer 判断题必须是 0（正确）或 1（错误），当前为 {ans!r}"
+                )
+
+
+def _validate_questions_math(questions):
+    """Run all validations on a questions list. Raises on first error."""
+    _validate_question_answer_schema(questions)
+    for label, text in _iter_question_strings(questions):
+        _validate_math_text(label, text)
+
+
 # ─── Interactive test page ──────────────────────────────────────────
 
 def save_test(questions, output_path, title, subtitle='', duration_minutes=30, wrong_answer_analysis_prompt=''):
@@ -245,6 +364,8 @@ def save_test(questions, output_path, title, subtitle='', duration_minutes=30, w
     subtitle: optional custom subtitle (overrides auto-generated duration subtitle)
     duration_minutes: used in auto-generated subtitle if subtitle is empty
     """
+    _copy_mathjax_to_dir(os.path.dirname(os.path.abspath(output_path)))
+    _validate_questions_math(questions)
     questions_json = json.dumps(questions, ensure_ascii=False)
     labels = json.loads(_read('test_labels.json'))
     labels_json = json.dumps(labels, ensure_ascii=False)

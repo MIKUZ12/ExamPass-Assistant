@@ -31,6 +31,48 @@ def build_test_prompt(text_summary: str, knowledge_markdown: str = "", question_
 - 题目不能只问「是什么」，必须经常追问「为什么」「怎么推出」「条件变了会怎样」「图中变化说明什么」
 - 每道题标注**分值**
 
+### 数学公式硬性要求
+
+- 所有数学符号必须用 `$...$` 包裹，包括选项中的 `$K_v$`、`$A^{T}$`、`$1/K_v$`。
+- 行内公式只能用 `$...$`，禁止在句子中使用 `$$...$$`。
+- 块级公式才能使用 `$$...$$`，且必须独立成段。
+- 分数写 `\frac{a}{b}`。
+- 极限写 `\lim_{s \to 0}`。
+- 无穷写 `\infty`。
+- 反正切写 `\arctan(at)`。
+- 近似写 `\approx`。
+- 矩阵写 `\begin{bmatrix} ... \end{bmatrix}`，不能写 `\begin{\bmatrix}`。
+- 分段函数写 `\begin{cases} ... \end{cases}`。
+- 转置写 `$A^{T}$`，不要写裸露的 `A^T`。
+- 比较关系写 `$0 < \zeta < 1$`。
+
+### 章节测试 questions JSON 要求
+
+- 选择题 `answer` 必须是正确选项下标：0、1、2、3。
+- 判断题 `answer` 必须是 0 或 1，其中 0 表示"正确"，1 表示"错误"。
+- 不要把 `answer` 写成 `"A"`、`"B"`、`"PBH判据"` 或公式文本。
+- `question`、`options`、`explanation`、`pitfall` 中出现数学表达式时必须符合 MathJax 写法。
+- 不要生成裸露的 `A^T`、`K_v`、`1/K_v`、`G(s)`。
+
+正确 JSON 示例：
+```json
+{
+  "type": "choice",
+  "points": 2,
+  "question": "静态误差系数 $K_v$ 的定义是：",
+  "options": [
+    "$K_v = \\lim_{s \\to 0} G(s)$",
+    "$K_v = \\lim_{s \\to 0} sG(s)$",
+    "$K_v = \\lim_{s \\to 0} s^2G(s)$",
+    "$K_v = \\lim_{s \\to \\infty} sG(s)$"
+  ],
+  "answer": 1,
+  "knowledge_point": "静态误差系数定义",
+  "explanation": "正确答案：$K_v = \\lim_{s \\to 0} sG(s)$。",
+  "pitfall": "不要把 $K_v$ 与 $K_p$、$K_a$ 混淆。"
+}
+```
+
 ### 输出格式
 
 先输出**纯题目部分**，用 `## 题目` 标记开始。

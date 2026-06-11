@@ -30,7 +30,12 @@ function normalizedAnswer(q) {
     if (q.answer === LABELS.true_label || q.answer === true || q.answer === 'true') return 0;
     if (q.answer === LABELS.false_label || q.answer === false || q.answer === 'false') return 1;
   }
-  return parseInt(q.answer);
+
+  var ans = parseInt(q.answer);
+  if (Number.isNaN(ans)) {
+    console.error('ExamPass: Invalid answer field for question:', q.question, '| answer =', q.answer);
+  }
+  return ans;
 }
 
 function questionTypeLabel(type) {
